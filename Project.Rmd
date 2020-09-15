@@ -1,0 +1,98 @@
+---
+title: "STA305 Project - The Keys To Delicious Milktea"
+output: pdf_document
+---
+
+# Description of the design
+
+## Objective 
+During the struck of COVID-19, the minimization of time in public leads to the lack of opportunity to buy delicious milk tea from the shop. Why not make it my own! Making milk tea at home can ensure the freshness and safety of the ingredients. To make a delicious milk tea, the ratio of ingredients is the key. So I am interested in how various ingredients affect the taste of a homemade milk tea.  I am particularly interested in the effects of varying the amount of tea, milk, and sugar. \newline 
+
+## Reason for Replicated Factorial Experiment
+The amount of tea, milk and sugar are the three factors in the experiment.\newline
+Therefore, I decide to use a $2^3$ factorial design to conduct my experiment, which means that all the three factors have two levels.The levels are: 
+```{r, echo=FALSE}
+knitr::opts_chunk$set(fig.width=3.5, fig.height=2.8,echo = FALSE,warning=FALSE, message=FALSE) 
+sign <- c(-1,1)
+tea_ml <- c(80, 100)
+milk_ml <- c(150,200)
+sugar_g <- c(10,15)
+
+rubric <- data.frame(sign,tea_ml,milk_ml,sugar_g)
+rubric
+```
+
+So, there are 8 different combinations in making bubble tea. \newline
+To estimate the variance, I replicated the experiment, so I had two runs for each combination of milk tea. Therefore, I have 16 observations.
+
+
+## Method Of Experiment 
+  I randomly sampled the 16 trials using R before the start of the experiment, during the experiment, I followed the randomized order. However, I will display the organized version below. 
+  From Aug 3 - 11 (8 days), I followed the randomly sampled order, and had two types of milk tea each day at 2pm and 4pm. Those time are between lunch and dinner, they are carefully chose to avoid the empty stomachs effect (people often think the tastes of food is better when they are hungry). Also, to minimized the effect of lunch and dinner, I had similar dishes each day. \newline
+For the consistence of the ingredient, I used the same type of black tea leaves, and 3.25% of Natrel milk. For each run, I made the milk tea with corresponding amount of ingredients. To prepare the tea, I boiled 15g of black tea leaves with 200ml water for 9 minutes. Then I poured in the corresponding amount of milk , tea and sugar into a same glass cup(I used the same cup through put the experiment). Then mix them well(until the sugar is fully dissolved) with the same tablespoon. Right after I finished tasting the milk tea, I rated the taste of milk tea with the score 1 to 10. 
+
+\newpage
+
+```{r,echo=FALSE}
+Setup <- rep(1:16)
+Tea <- rep(rep(c(-1,1),each=2),4)
+Milk <- rep(rep(c(-1,1),each=4),2)
+Sugar <- rep(c(-1,1), each=8)
+Rate <- c(8,9.5,7,6.5,5,6.5,7.5,8,8,9,5,7,4,7,7.5,7)
+
+data <- data.frame(Setup,Tea,Milk,Sugar,Rate)
+```
+# Analysis
+
+Linear Regression is used to analyze the effects of the three factors. 
+The model is $rate_i = \beta_0 + \beta_1x_{i1}+\beta_2x_{i2}+\beta_3x_{i3}+\beta_4x_{i1}x_{i2}+\beta_5x_{i1}x_{i3}+\beta_6x_{i2}x_{i3}+\beta_7x_{i1}x_{i2}x_{i3}+ \epsilon_i$, where 
+$\epsilon_i \sim N(0, \sigma^2)$
+
+```{r, echo=FALSE}
+library(DoE.base)
+library(FrF2)
+
+
+model <-lm(Rate ~ Tea*Milk*Sugar,data = data)
+
+cubePlot(model, "Tea","Milk","Sugar", main = "Cube Plot for The Delicious MilkTea Experiment",cex.title=0.5,size=0.66)
+
+interaction.plot(Tea,Milk,Rate)
+interaction.plot(Tea,Sugar,Rate)
+interaction.plot(Sugar,Milk,Rate)
+```
+
+### Cube-plot and Interaction Plot
+
+The cube plot displays the means of the rating of all combinations for the three factors. Here, we can see that the combination of sugar (-1), tea (-1), and milk(-1), which is the combination of 80ml tea, 150 milk, and 10g of sugar, has the highest average rating (8.75/10). On the other hand, 80ml tea, 150ml of milk, and 15g of sugar have the lowest rating (5.5/10). This result is possibly due to that this combination has the lowest amount of liquid and the highest amount of tea out of all other combinations. So it was too sweet for a low rating.
+The main effect of sugar is $\frac{(8.5-8.75)+(5.5-5.75)+(6-6.75)+(7.25-7.75)}{4}$ = -0.4375
+The main effect of milk is -1.0625;
+The main effect of tea is -0.1875; \newline
+From the interaction plots, we know that the amount of milk and tea has an interaction effect on the rating. Also, the amount of Sugar and Tea has an interaction effect on the rating because the two lines are not parallel. However, we know that sugar and milk have no interaction since there are two parallel lines on the plot. However, these analyses are not 100% precise; for a more accurate analysis, we will check the p-value for the effects later.
+
+### Summary Table
+
+```{r}
+summary(model)
+```
+$H_0: \beta_i = 0, H_a: \beta_i \ne 0$, for i = 0-7.
+The main effect of tea is -0.094 * 2 =  -0.188, which is the average difference in rating when the amount of tea is 100ml versus 150ml. The average rating for the milk teas with 100ml of tea is 0.188 lower than the milk teas that have 150ml of tea. The p-value for the estimated coefficient of tea is greater than 0.05, so we failed to reject $H_0$, so no evidence using 100ml of tea affects the rating of milk tea negatively. Moreover, The p-value for sugar and milk's main effect is less than 0.05, so we failed to reject $H_0$, so no evidence is using 150ml of milk, and 10g of sugar affects the rating of milk tea negatively.
+However, the interaction term of tea and milk has a p-value of less than 0.05, so there is strong evidence against $H_0$. So the effect of tea and milk on the taste of milk tea is dependent on each other. The standard error of this interaction effect is 2*0.274 = 0.548. And the variance of this interaction effect is $0.548^2 = 0.300304$\newline 
+All other p_value for interaction effects are too large, and they failed to reject H_0, so the effect of milk and sugar, tea and sugar and milk and sugar and tea are independent of each other. 
+The residual standard error (s) of the model is 1.097. The variance of model is $s^2 = 1.097^2=1.203409$.
+
+```{r}
+round(2*cbind(model$coefficients, confint(model)),2)[-1,]
+```
+The 95% confidence interval of the interaction effect of Tea: Milk is [0.80,3.33]; however, 0 is not contained in this interval. Hence there is an interaction effect of Tea: Milk to the taste of the milk tea. 
+All other 95% confidence interval contains 0. Hence those effects are not significant to the taste of the milk tea. 
+
+## Conclusion 
+
+This experiment is intended to find out the secret ratio behind delicious milk tea.  Milk, tea, and sugar are the most critical ingredients; they became the three factors of this $2^3$ factorial design experiment on the making of good-tasting milk tea. All three factors have two levels. They are labeled 1 and -1, and there are a total of 8 combinations. The experiment is repeated, so there are 16 observations in this experiment. \newline
+The amount of tea, milk, and sugar does not significantly affect the rating of milk tea's taste since the summary table shows large p-values for the three effects. For example, the p_value for the estimate of tea is 0.74, which is greater than 0.05, which fails to reject $H_0$, which means that the average of the rating when the tea is level positive(=1) is equal to the tea that is leveled negative(=-1). Moreover, 95% confidence interval also suggests the same thing. It is [-1.45,1.08], which contains 0, meaning that different tea's levels are not significant to the taste of the milk tea.\newline
+Similar results also happen for the effect of milk and sugar. Hence, the average of the rating when the milk is level positive(=1) is equal to the milk that is leveled negative(=-1), and the effect of the amount of milk is not significant to the taste of the milk tea. Also, the average of the rating when the sugar is level positive(=1) is equal to the sugar leveled negative(=-1), and the effect of tea is not significant to the taste of the milk tea. These results are possibly due to the amount of the three factors for the two levels that are not distinctly different, which results in a slightly similar ratio of ingredients for the 8 combinations. \newline 
+However, for the interaction effect, the summary table shows a small p_value for the interaction effect of tea and milk, which fails to reject $H_0: \beta_4=0$, so the amount of milk should interpret at different levels of tea.
+For the other interaction, milk and sugar have a 95% confidence interval that contains 0, and it has a large p_value that is greater than 0.05, which rejects the $H_0$ that there is no interaction effect between milk and sugar to the rating. Milk and sugar are independent of each other. Same for tea and sugar, tea and milk, and sugar.
+After all, when trying to make a delicious milk tea at home, people should pay extra attention to the ratio of tea and milk.
+
